@@ -1,0 +1,11 @@
+# Python dependencies for AI-powered testing tools
+# Install with: pip install -r requirements.txt
+
+# Anthropic Claude API client
+anthropic>=0.18.0
+
+# Optional: For enhanced output formatting
+colorama>=0.4.6
+
+# Optional: For JSON handling and validation
+jsonschema>=4.17.0

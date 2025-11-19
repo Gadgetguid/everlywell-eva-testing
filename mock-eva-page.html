@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock Everlywell Support Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+    }
+
+    .header {
+      background: white;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      color: #667eea;
+      font-size: 24px;
+    }
+
+    .content {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .info-section {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-section h2 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .info-section p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .chatbot-container {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .chatbot-iframe {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      pointer-events: all;
+    }
+
+    .test-mode-badge {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #ff4444;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 2000;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (min-width: 768px) {
+      .chatbot-container {
+        width: 400px;
+        height: 600px;
+        bottom: 20px;
+        right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-mode-badge">TEST MODE</div>
+
+  <div class="header">
+    <h1>Everlywell Support</h1>
+  </div>
+
+  <div class="content">
+    <div class="info-section">
+      <h2>Welcome to Everlywell Support</h2>
+      <p>
+        This is a mock support page for testing the Eva chatbot. The chatbot is embedded
+        below and accessible through an iframe, just like the real implementation.
+      </p>
+      <p>
+        You can interact with Eva to get answers about:
+      </p>
+      <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+        <li>Test timing and results</li>
+        <li>Shipping and delivery</li>
+        <li>Medical result interpretations (will defer to physician)</li>
+        <li>Account management</li>
+        <li>General health questions</li>
+      </ul>
+    </div>
+
+    <div class="info-section">
+      <h2>For Testing</h2>
+      <p>
+        This mock chatbot responds to all test scenarios defined in the Playwright tests.
+        It simulates appropriate responses including:
+      </p>
+      <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+        <li>Direct answers for timing and general questions</li>
+        <li>Deferring to physicians for medical interpretation</li>
+        <li>Redirecting to support for account management</li>
+        <li>Not mentioning specific medications</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Chatbot iframe matching the real Eva setup -->
+  <div class="chatbot-container">
+    <iframe
+      id="_jst_frame"
+      class="chatbot-iframe"
+      src="mock-eva-chatbot.html"
+      title="Eva Support Chatbot"
+      allow="clipboard-write"
+    ></iframe>
+  </div>
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock Eva Support Chatbot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .chat-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 500px;
+      height: 600px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: #667eea;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 2px solid #5568d3;
+    }
+
+    .chat-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .chat-header p {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f7f9fc;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message.user {
+      align-items: flex-end;
+    }
+
+    .message.bot {
+      align-items: flex-start;
+    }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .message.user .message-bubble {
+      background: #667eea;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.bot .message-bubble {
+      background: white;
+      color: #333;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .chat-input:focus {
+      border-color: #667eea;
+    }
+
+    .send-button {
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+      font-size: 18px;
+    }
+
+    .send-button:hover {
+      background: #5568d3;
+    }
+
+    .send-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .typing-indicator {
+      display: none;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: fit-content;
+    }
+
+    .typing-indicator.active {
+      display: block;
+    }
+
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.7;
+      }
+      30% {
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+    }
+
+    .welcome-message {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>Eva Support Assistant</h1>
+      <p>Mock Chatbot for Testing</p>
+    </div>
+
+    <div class="chat-messages" data-testid="chat-interface">
+      <div class="welcome-message">
+        Hello! I'm Eva, your support assistant. How can I help you today?
+      </div>
+    </div>
+
+    <div class="typing-indicator" data-testid="typing-indicator">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div class="chat-input-container">
+      <input
+        type="text"
+        class="chat-input"
+        data-testid="message-input"
+        placeholder="Type your message..."
+        autocomplete="off"
+      >
+      <button class="send-button" data-testid="send-button">→</button>
+    </div>
+  </div>
+
+  <script>
+    const messagesContainer = document.querySelector('.chat-messages');
+    const messageInput = document.querySelector('[data-testid="message-input"]');
+    const sendButton = document.querySelector('[data-testid="send-button"]');
+    const typingIndicator = document.querySelector('[data-testid="typing-indicator"]');
+
+    // Response patterns for different question types
+    const responsePatterns = [
+      // ========== TIMING QUESTIONS ==========
+      {
+        patterns: ['when.*results.*ready', 'how long.*results', 'results.*ready'],
+        response: 'Your test results are typically ready within 5-7 business days after the lab receives your sample. You will receive an email notification when your results are complete and available in your account dashboard.'
+      },
+      {
+        patterns: ['how long.*shipping', 'shipping.*take', 'delivery.*time'],
+        response: 'Shipping typically takes 3-5 business days for standard delivery. You will receive a tracking number via email once your test kit ships, so you can monitor its progress.'
+      },
+      {
+        patterns: ['when.*expect.*kit', 'when.*kit.*arrive', 'kit.*delivery'],
+        response: 'Your test kit should arrive within 3-5 business days after your order is placed. You can track your order using the tracking information sent to your email.'
+      },
+
+      // ========== MEDICAL INTERPRETATION - TSH ==========
+      {
+        patterns: ['tsh.*5\\.2', 'tsh.*mean', 'thyroid.*5\\.2'],
+        response: 'Your TSH level of 5.2 is elevated and may indicate thyroid function concerns. TSH (thyroid-stimulating hormone) helps regulate your thyroid. I recommend consulting with your physician or healthcare provider to discuss these results and determine if any further evaluation or treatment is needed.'
+      },
+      {
+        patterns: ['high.*cortisol.*25', 'cortisol.*25', 'cortisol.*high'],
+        response: 'A high cortisol level of 25 can be related to stress or other factors. Cortisol is your body\'s main stress hormone. I recommend discussing these results with your physician or healthcare provider to understand what may be causing the elevation and what steps you should take.'
+      },
+      {
+        patterns: ['vitamin d.*15', 'vitamin d.*low', 'vitamin d.*mean'],
+        response: 'Your vitamin D level of 15 is low and indicates a deficiency. Vitamin D is important for bone health and immune function. Please consult with your physician or healthcare provider to discuss supplementation and treatment options.'
+      },
+      {
+        patterns: ['hba1c.*6\\.8', 'hba1c.*mean', 'blood sugar.*6\\.8'],
+        response: 'Your HbA1c level of 6.8 is elevated and may indicate concerns with blood sugar control and glucose metabolism. This test measures your average blood sugar over the past 2-3 months. I recommend consulting with your physician or healthcare provider about these results and diabetes screening.'
+      },
+      {
+        patterns: ['testosterone.*300', 'testosterone.*level', 'testosterone.*mean'],
+        response: 'Your testosterone level of 300 is within the lower range for this hormone. Testosterone affects various aspects of health. I recommend discussing these results with your physician or healthcare provider to determine if any further evaluation is needed.'
+      },
+
+      // ========== MEDICAL ADVICE ==========
+      {
+        patterns: ['should.*medication.*cholesterol', 'take.*medication.*cholesterol', 'medication.*high cholesterol'],
+        response: 'I cannot provide medical advice about whether you should take medication for high cholesterol. This is an important decision that should be made in consultation with your physician or healthcare provider, who can evaluate your overall health, risk factors, and individual needs.'
+      },
+      {
+        patterns: ['what medication.*thyroid', 'medication.*thyroid', 'thyroid.*medication'],
+        response: 'I cannot prescribe or recommend specific medications for thyroid conditions. Please consult with your physician or healthcare provider who can evaluate your thyroid function and determine the most appropriate treatment for your individual situation.'
+      },
+      {
+        patterns: ['treat.*vitamin d.*supplement', 'vitamin d.*supplement', 'can i take.*vitamin d'],
+        response: 'While vitamin D supplements are available, I cannot provide medical advice on treatment. Please consult with your physician or healthcare provider to discuss the appropriate dosage and supplementation plan for your individual needs.'
+      },
+      {
+        patterns: ['should.*concerned.*results', 'worried.*results', 'concerned.*test'],
+        response: 'I recommend discussing your test results with your physician or healthcare provider. They can review your results in the context of your overall health and medical history to help you understand what they mean for you specifically.'
+      },
+
+      // ========== ACCOUNT MANAGEMENT ==========
+      {
+        patterns: ['cancel.*test', 'how.*cancel', 'cancel.*order'],
+        response: 'To cancel your test order, please contact our customer service support team. They can help you with the cancellation process and discuss refund options if applicable. You can reach them through your account settings or our help center.'
+      },
+      {
+        patterns: ['update.*shipping address', 'change.*address', 'shipping.*address'],
+        response: 'You can update your shipping address by logging into your account and going to your profile settings. Look for the shipping address section where you can make changes. If you need assistance, our customer service team can help.'
+      },
+      {
+        patterns: ['view.*results', 'see.*results', 'access.*results'],
+        response: 'You can view your test results by logging into your account dashboard. Once your results are ready, they will be available under the "Results" section. You\'ll also receive an email notification when new results are available to view.'
+      },
+      {
+        patterns: ['return.*test kit', 'how.*return', 'return.*kit'],
+        response: 'To return your test kit, please contact our customer service support team. They will provide you with return shipping instructions and a return label if needed. Our support team can assist you with the return process.'
+      },
+
+      // ========== GENERAL HEALTH QUESTIONS ==========
+      {
+        patterns: ['what tests.*offer', 'available.*tests', 'tests.*offer'],
+        response: 'We offer a wide range of health tests across multiple categories including thyroid health, vitamin levels, metabolic health, hormone testing, and more. You can browse our full catalog of available tests on our website to find the right test for your health needs.'
+      },
+      {
+        patterns: ['how accurate.*tests', 'test.*accuracy', 'accurate.*tests'],
+        response: 'Our tests are highly accurate and processed in CLIA-certified laboratories that meet rigorous quality standards. We use the same laboratory testing methods used by healthcare providers to ensure reliable and accurate results.'
+      },
+      {
+        patterns: ['what.*before.*test', 'preparation.*test', 'before taking.*test'],
+        response: 'Test preparation varies depending on the specific test you\'re taking. Please read the instructions included with your test kit carefully. Some tests may require fasting or taking your sample at a specific time of day for the most accurate results.'
+      },
+      {
+        patterns: ['share.*results.*doctor', 'download.*results', 'send.*doctor'],
+        response: 'Yes, you can easily share your results with your doctor or physician. You can download a PDF of your results from your account dashboard and print or email them to your healthcare provider for review and discussion.'
+      },
+
+      // ========== DEFAULT RESPONSE ==========
+      {
+        patterns: ['.*'], // Catch-all pattern
+        response: 'Thank you for your question. I can help you with information about test timing, account management, and general health questions. For specific medical advice or interpretation of your results, I recommend consulting with your physician or healthcare provider. How else can I assist you today?'
+      }
+    ];
+
+    function findResponse(userMessage) {
+      const lowerMessage = userMessage.toLowerCase();
+
+      for (const pattern of responsePatterns) {
+        for (const regex of pattern.patterns) {
+          if (new RegExp(regex, 'i').test(lowerMessage)) {
+            return pattern.response;
+          }
+        }
+      }
+
+      return responsePatterns[responsePatterns.length - 1].response;
+    }
+
+    function addMessage(text, isUser) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = 'message-bubble';
+      bubbleDiv.textContent = text;
+
+      if (isUser) {
+        bubbleDiv.setAttribute('data-testid', 'user-message');
+      } else {
+        bubbleDiv.setAttribute('data-testid', 'eva-response');
+      }
+
+      messageDiv.appendChild(bubbleDiv);
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      typingIndicator.classList.add('active');
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      typingIndicator.classList.remove('active');
+    }
+
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      // Add user message
+      addMessage(message, true);
+      messageInput.value = '';
+      sendButton.disabled = true;
+
+      // Show typing indicator
+      showTypingIndicator();
+
+      // Simulate thinking time (500-1500ms)
+      const thinkingTime = 500 + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, thinkingTime));
+
+      // Hide typing indicator
+      hideTypingIndicator();
+
+      // Get and add bot response
+      const response = findResponse(message);
+      addMessage(response, false);
+
+      sendButton.disabled = false;
+      messageInput.focus();
+    }
+
+    // Event listeners
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Focus input on load
+    messageInput.focus();
+  </script>
+</body>
+</html>

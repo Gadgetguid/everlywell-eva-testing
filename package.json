@@ -1,0 +1,21 @@
+{
+  "name": "everlywell-eva-chatbot-tests",
+  "version": "1.0.0",
+  "description": "Playwright tests for Eva Support chatbot",
+  "scripts": {
+    "mock-server": "node mock-server.js",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:mock": "TEST_MODE=mock playwright test",
+    "test:mock:headed": "TEST_MODE=mock playwright test --headed",
+    "test:mock:ui": "TEST_MODE=mock playwright test --ui",
+    "test:real": "TEST_MODE=real playwright test",
+    "test:real:headed": "TEST_MODE=real playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
+

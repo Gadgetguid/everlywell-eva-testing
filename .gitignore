@@ -1,0 +1,41 @@
+# Node modules
+node_modules/
+
+# Test results
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Python
+__pycache__/
+*.pyc
+.Python
+env/
+venv/
+*.egg-info/
+
+# Generated test files (optional - you might want to keep these)
+tests/generated-*.spec.js
+analysis/
+
+# Environment variables - NEVER commit API keys
+.env
+.env.local
+*.key
+
+# OS files
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
