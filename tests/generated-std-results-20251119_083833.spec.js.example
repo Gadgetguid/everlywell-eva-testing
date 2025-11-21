@@ -1,0 +1,350 @@
+const { test, expect } = require('@playwright/test');
+const { CHATBOT_URL, USE_IFRAME, TEST_MODE } = require('../test-config');
+
+console.log(`Running tests in ${TEST_MODE.toUpperCase()} mode against: ${CHATBOT_URL}`);
+
+// Helper function to generate date strings (YYYY-MM-DD format)
+function getDateString(daysAgo = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString().split('T')[0];
+}
+
+test.describe('STD Results', () => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to STD results page with authenticated patient session
+    await page.goto(CHATBOT_URL, {
+      waitUntil: 'load',
+      timeout: 60000
+    });
+  });
+
+  test.describe('Happy Path Tests', () => {
+    test('should display STD test results when available', async ({ page }) => {
+      // Wait for results container to load
+      await expect(page.locator('[data-testid="std-results-container"]')).toBeVisible();
+      
+      // Verify main results section is present
+      await expect(page.locator('[data-testid="test-results-list"]')).toBeVisible();
+      
+      // Check that test date is displayed
+      await expect(page.locator('[data-testid="test-date"]')).toBeVisible();
+      await expect(page.locator('[data-testid="test-date"]')).toContainText(/\d{1,2}\/\d{1,2}\/\d{4}/);
+      
+      // Verify individual test results are shown
+      const testResults = page.locator('[data-testid="individual-test-result"]');
+      await expect(testResults).toHaveCount(await testResults.count());
+      
+      // Check that each result has status (Negative/Positive/Pending)
+      const firstResult = testResults.first();
+      await expect(firstResult.locator('[data-testid="test-name"]')).toBeVisible();
+      await expect(firstResult.locator('[data-testid="test-status"]')).toBeVisible();
+    });
+
+    test('should allow user to download PDF results', async ({ page }) => {
+      // Wait for download button to be available
+      await expect(page.locator('[data-testid="download-results-btn"]')).toBeVisible();
+      
+      // Start waiting for download before clicking
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('[data-testid="download-results-btn"]').click();
+      
+      // Verify download starts
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toMatch(/std-results.*\.pdf/i);
+    });
+
+    test('should display medical disclaimer and physician consultation recommendation', async ({ page }) => {
+      // Verify medical disclaimer is prominently displayed
+      await expect(page.locator('[data-testid="medical-disclaimer"]')).toBeVisible();
+      await expect(page.locator('[data-testid="medical-disclaimer"]')).toContainText(/consult.*physician|healthcare provider/i);
+      
+      // Check for appropriate medical advice deferral language
+      const disclaimerText = await page.locator('[data-testid="medical-disclaimer"]').textContent();
+      expect(disclaimerText).toMatch(/not.*substitute.*medical advice/i);
+      
+      // Verify "Contact Provider" button is available
+      await expect(page.locator('[data-testid="contact-provider-btn"]')).toBeVisible();
+    });
+
+    test('should navigate to detailed result view', async ({ page }) => {
+      // Click on first test result to view details
+      await page.locator('[data-testid="individual-test-result"]').first().click();
+      
+      // Wait for detailed view to load
+      await expect(page.locator('[data-testid="detailed-result-view"]')).toBeVisible();
+      
+      // Verify detailed information is shown
+      await expect(page.locator('[data-testid="test-methodology"]')).toBeVisible();
+      await expect(page.locator('[data-testid="reference-ranges"]')).toBeVisible();
+      
+      // Check back button functionality
+      await page.locator('[data-testid="back-to-results-btn"]').click();
+      await expect(page.locator('[data-testid="test-results-list"]')).toBeVisible();
+    });
+  });
+
+  test.describe('Edge Cases', () => {
+    test('should handle multiple test panels with varying result dates', async ({ page }) => {
+      // Mock response with multiple test dates
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [
+              { date: getDateString(5), tests: [{ name: 'Chlamydia', status: 'Negative' }] },
+              { date: getDateString(10), tests: [{ name: 'Gonorrhea', status: 'Negative' }] },
+              { date: getDateString(15), tests: [{ name: 'HIV', status: 'Negative' }] }
+            ]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Verify results are grouped by date
+      const resultGroups = page.locator('[data-testid="result-group"]');
+      await expect(resultGroups).toHaveCount(3);
+      
+      // Check chronological ordering (most recent first)
+      const firstDate = await resultGroups.first().locator('[data-testid="test-date"]').textContent();
+      const lastDate = await resultGroups.last().locator('[data-testid="test-date"]').textContent();
+      expect(new Date(firstDate)).toBeGreaterThan(new Date(lastDate));
+    });
+
+    test('should handle pending test results appropriately', async ({ page }) => {
+      // Mock response with pending results
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [{
+              date: getDateString(5),
+              tests: [
+                { name: 'Chlamydia', status: 'Pending' },
+                { name: 'Gonorrhea', status: 'Pending' }
+              ]
+            }]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Verify pending status is clearly displayed
+      const pendingResults = page.locator('[data-testid="test-status"]:has-text("Pending")');
+      await expect(pendingResults).toHaveCount(2);
+      
+      // Check that pending results show expected timeframe
+      await expect(page.locator('[data-testid="pending-timeframe"]')).toBeVisible();
+      await expect(page.locator('[data-testid="pending-timeframe"]')).toContainText(/24-48 hours|1-2 business days/i);
+      
+      // Verify download button is disabled for pending results
+      await expect(page.locator('[data-testid="download-results-btn"]')).toBeDisabled();
+    });
+
+    test('should handle rapid navigation between result details', async ({ page }) => {
+      // Rapidly click through multiple results
+      const results = page.locator('[data-testid="individual-test-result"]');
+      const resultCount = await results.count();
+      
+      for (let i = 0; i < Math.min(resultCount, 3); i++) {
+        await results.nth(i).click();
+        await expect(page.locator('[data-testid="detailed-result-view"]')).toBeVisible();
+        await page.locator('[data-testid="back-to-results-btn"]').click();
+        await expect(page.locator('[data-testid="test-results-list"]')).toBeVisible();
+      }
+    });
+
+    test('should handle results with special characters in test names', async ({ page }) => {
+      // Mock response with complex test names
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [{
+              date: getDateString(5),
+              tests: [
+                { name: 'HSV-1/2 IgG', status: 'Negative' },
+                { name: 'Hepatitis B (HBsAg)', status: 'Negative' },
+                { name: 'Syphilis (RPR w/Reflex)', status: 'Negative' }
+              ]
+            }]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Verify special characters are displayed correctly
+      await expect(page.locator('[data-testid="test-name"]:has-text("HSV-1/2")')).toBeVisible();
+      await expect(page.locator('[data-testid="test-name"]:has-text("(HBsAg)")')).toBeVisible();
+      await expect(page.locator('[data-testid="test-name"]:has-text("w/Reflex")')).toBeVisible();
+    });
+  });
+
+  test.describe('Error Handling', () => {
+    test('should handle API failure gracefully', async ({ page }) => {
+      // Mock API failure
+      await page.route('**/api/std-results', async route => {
+        await route.abort('failed');
+      });
+      
+      await page.reload();
+      
+      // Verify error message is displayed
+      await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
+      await expect(page.locator('[data-testid="error-message"]')).toContainText(/unable to load|temporarily unavailable/i);
+      
+      // Check retry button is available
+      await expect(page.locator('[data-testid="retry-btn"]')).toBeVisible();
+      
+      // Verify error doesn't expose technical details
+      const errorText = await page.locator('[data-testid="error-message"]').textContent();
+      expect(errorText).not.toMatch(/500|404|network|server/i);
+    });
+
+    test('should handle timeout scenarios', async ({ page }) => {
+      // Mock slow API response
+      await page.route('**/api/std-results', async route => {
+        await new Promise(resolve => setTimeout(resolve, 35000)); // 35 second delay
+        await route.fulfill({ json: { results: [] } });
+      });
+      
+      // Set shorter timeout for this test
+      page.setDefaultTimeout(30000);
+      
+      await page.reload();
+      
+      // Should show loading state then timeout error
+      await expect(page.locator('[data-testid="loading-spinner"]')).toBeVisible();
+      await expect(page.locator('[data-testid="timeout-error"]')).toBeVisible({ timeout: 30000 });
+    });
+
+    test('should handle invalid/corrupted result data', async ({ page }) => {
+      // Mock response with invalid data
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [{
+              date: 'invalid-date',
+              tests: [
+                { name: null, status: 'Unknown' },
+                { name: 'Valid Test', status: null }
+              ]
+            }]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Should handle gracefully and show partial results where possible
+      await expect(page.locator('[data-testid="data-error-notice"]')).toBeVisible();
+      await expect(page.locator('[data-testid="contact-support-btn"]')).toBeVisible();
+      
+      // Valid data should still be displayed if possible
+      await expect(page.locator('[data-testid="test-name"]:has-text("Valid Test")')).toBeVisible();
+    });
+
+    test('should handle network disconnection during download', async ({ page }) => {
+      // Start download then simulate network failure
+      await expect(page.locator('[data-testid="download-results-btn"]')).toBeVisible();
+      
+      // Simulate network offline
+      await page.context().setOffline(true);
+      
+      await page.locator('[data-testid="download-results-btn"]').click();
+      
+      // Should show network error
+      await expect(page.locator('[data-testid="network-error"]')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid="network-error"]')).toContainText(/network|connection/i);
+    });
+  });
+
+  test.describe('Healthcare-Specific Validations', () => {
+    test('should defer medical advice and recommend physician consultation', async ({ page }) => {
+      // Verify medical advice deferral is prominent and clear
+      const disclaimer = page.locator('[data-testid="medical-disclaimer"]');
+      await expect(disclaimer).toBeVisible();
+      
+      const disclaimerText = await disclaimer.textContent();
+      expect(disclaimerText).toMatch(/these results are not a substitute for medical advice/i);
+      expect(disclaimerText).toMatch(/consult.*healthcare provider|physician/i);
+      expect(disclaimerText).toMatch(/discuss.*results.*with.*doctor/i);
+      
+      // Ensure no specific medication names are mentioned
+      expect(disclaimerText).not.toMatch(/azithromycin|doxycycline|penicillin|antibiotic/i);
+      
+      // Verify consultation reminder for positive results if any
+      const positiveResults = page.locator('[data-testid="test-status"]:has-text("Positive")');
+      if (await positiveResults.count() > 0) {
+        await expect(page.locator('[data-testid="urgent-consultation-notice"]')).toBeVisible();
+      }
+    });
+
+    test('should maintain appropriate tone for sensitive results', async ({ page }) => {
+      // Mock positive result to test tone
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [{
+              date: getDateString(5),
+              tests: [{ name: 'Chlamydia', status: 'Positive' }]
+            }]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Verify non-alarming language is used
+      const pageText = await page.locator('[data-testid="std-results-container"]').textContent();
+      expect(pageText).not.toMatch(/infected|disease|contaminated|dirty/i);
+      expect(pageText).toMatch(/positive|detected|present/i);
+      
+      // Check for supportive, non-judgmental language
+      await expect(page.locator('[data-testid="support-resources"]')).toBeVisible();
+      await expect(page.locator('[data-testid="next-steps-guidance"]')).toBeVisible();
+    });
+
+    test('should implement HIPAA compliance measures', async ({ page }) => {
+      // Verify session timeout warning
+      await expect(page.locator('[data-testid="session-timeout-warning"]')).toBeHidden();
+      
+      // Check that sensitive data is not exposed in URL
+      expect(page.url()).not.toMatch(/positive|negative|chlamydia|gonorrhea|hiv/i);
+      
+      // Verify secure download handling
+      await page.locator('[data-testid="download-results-btn"]').click();
+      
+      // Should require additional authentication or confirmation
+      await expect(page.locator('[data-testid="download-confirmation-modal"]')).toBeVisible();
+      await expect(page.locator('[data-testid="download-security-notice"]')).toBeVisible();
+    });
+
+    test('should include patient safety checks and warnings', async ({ page }) => {
+      // Mock result requiring urgent follow-up
+      await page.route('**/api/std-results', async route => {
+        await route.fulfill({
+          json: {
+            results: [{
+              date: getDateString(5),
+              tests: [
+                { name: 'HIV', status: 'Positive', urgency: 'high' },
+                { name: 'Syphilis', status: 'Positive', urgency: 'high' }
+              ]
+            }]
+          }
+        });
+      });
+      
+      await page.reload();
+      
+      // Verify urgent consultation notices
+      await expect(page.locator('[data-testid="urgent-consultation-banner"]')).toBeVisible();
+      await expect(page.locator('[data-testid="urgent-physician-contact"]')).toBeVisible();
+
+      // Check that support resources are prominently displayed
+      await expect(page.locator('[data-testid="crisis-support-link"]')).toBeVisible();
+      await expect(page.locator('[data-testid="immediate-next-steps"]')).toBeVisible();
+    });
+  });
+});

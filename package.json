@@ -12,10 +12,22 @@
     "test:mock:headed": "TEST_MODE=mock playwright test --headed",
     "test:mock:ui": "TEST_MODE=mock playwright test --ui",
     "test:real": "TEST_MODE=real playwright test",
-    "test:real:headed": "TEST_MODE=real playwright test --headed"
+    "test:real:headed": "TEST_MODE=real playwright test --headed",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:headed": "cypress run --headed",
+    "cypress:run:mock": "TEST_MODE=mock cypress run",
+    "cypress:run:real": "TEST_MODE=real cypress run",
+    "cypress:run:mock:headed": "TEST_MODE=mock cypress run --headed",
+    "cypress:run:real:headed": "TEST_MODE=real cypress run --headed",
+    "cypress:report": "open cypress/reports/mochawesome-report.html || xdg-open cypress/reports/mochawesome-report.html",
+    "benchmark": "./benchmark-tests.sh"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0"
+    "@playwright/test": "^1.40.0",
+    "cypress": "^13.0.0",
+    "mochawesome": "^7.1.4",
+    "mochawesome-merge": "^5.0.0",
+    "mochawesome-report-generator": "^6.3.2"
   }
 }
-

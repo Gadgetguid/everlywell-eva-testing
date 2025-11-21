@@ -13,54 +13,133 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: transparent;
       height: 100vh;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .chat-widget-container {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      z-index: 10000;
+    }
+
+    .chat-button {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #7B5FE8 0%, #9D7FF5 100%);
+      border-radius: 50%;
+      border: none;
+      box-shadow: 0 4px 12px rgba(123, 95, 232, 0.4);
+      cursor: pointer;
+      display: flex;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      margin: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .chat-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(123, 95, 232, 0.5);
+    }
+
+    .chat-button-icon {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      background: #4CAF50;
+      border-radius: 50%;
+      border: 2px solid white;
     }
 
     .chat-container {
       background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      width: 100%;
-      max-width: 500px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      width: 380px;
       height: 600px;
-      display: flex;
+      display: none;
       flex-direction: column;
       overflow: hidden;
+      margin: 0 20px 20px 0;
+    }
+
+    .chat-container.open {
+      display: flex;
     }
 
     .chat-header {
-      background: #667eea;
-      color: white;
+      background: white;
+      color: #333;
       padding: 20px;
-      text-align: center;
-      border-bottom: 2px solid #5568d3;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header-text {
+      flex: 1;
     }
 
     .chat-header h1 {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 600;
+      margin-bottom: 2px;
     }
 
     .chat-header p {
       font-size: 12px;
-      opacity: 0.9;
-      margin-top: 5px;
+      color: #666;
+    }
+
+    .close-button {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+
+    .close-button:hover {
+      background: #f5f5f5;
     }
 
     .chat-messages {
       flex: 1;
       overflow-y: auto;
       padding: 20px;
-      background: #f7f9fc;
+      background: #fafafa;
     }
 
     .message {
-      margin-bottom: 15px;
+      margin-bottom: 16px;
       display: flex;
       flex-direction: column;
     }
@@ -74,16 +153,16 @@
     }
 
     .message-bubble {
-      max-width: 80%;
+      max-width: 75%;
       padding: 12px 16px;
-      border-radius: 18px;
+      border-radius: 16px;
       word-wrap: break-word;
-      line-height: 1.4;
+      line-height: 1.5;
       font-size: 14px;
     }
 
     .message.user .message-bubble {
-      background: #667eea;
+      background: #7B5FE8;
       color: white;
       border-bottom-right-radius: 4px;
     }
@@ -92,48 +171,52 @@
       background: white;
       color: #333;
       border-bottom-left-radius: 4px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
 
     .chat-input-container {
-      padding: 20px;
+      padding: 16px 20px;
       background: white;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid #f0f0f0;
       display: flex;
-      gap: 10px;
+      gap: 8px;
+      align-items: center;
     }
 
     .chat-input {
       flex: 1;
       padding: 12px 16px;
-      border: 2px solid #e0e0e0;
+      border: 1px solid #e0e0e0;
       border-radius: 24px;
       font-size: 14px;
       outline: none;
       transition: border-color 0.3s;
+      background: #fafafa;
     }
 
     .chat-input:focus {
-      border-color: #667eea;
+      border-color: #7B5FE8;
+      background: white;
     }
 
     .send-button {
-      background: #667eea;
+      background: #4CAF50;
       color: white;
       border: none;
       border-radius: 50%;
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: background 0.3s;
-      font-size: 18px;
+      font-size: 16px;
+      flex-shrink: 0;
     }
 
     .send-button:hover {
-      background: #5568d3;
+      background: #45a049;
     }
 
     .send-button:disabled {
@@ -145,10 +228,11 @@
       display: none;
       padding: 12px 16px;
       background: white;
-      border-radius: 18px;
+      border-radius: 16px;
       border-bottom-left-radius: 4px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
       width: fit-content;
+      margin-bottom: 16px;
     }
 
     .typing-indicator.active {
@@ -159,7 +243,7 @@
       display: inline-block;
       width: 8px;
       height: 8px;
-      background: #667eea;
+      background: #7B5FE8;
       border-radius: 50%;
       margin: 0 2px;
       animation: typing 1.4s infinite;
@@ -176,50 +260,105 @@
     @keyframes typing {
       0%, 60%, 100% {
         transform: translateY(0);
-        opacity: 0.7;
+        opacity: 0.5;
       }
       30% {
-        transform: translateY(-10px);
+        transform: translateY(-6px);
         opacity: 1;
       }
     }
 
     .welcome-message {
-      text-align: center;
-      color: #666;
-      padding: 20px;
+      background: white;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      color: #333;
       font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .welcome-message strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #7B5FE8;
+    }
+
+    /* New call button styling */
+    .new-call-button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+
+    .new-call-button:hover {
+      background: #45a049;
+    }
+
+    .new-call-button svg {
+      width: 16px;
+      height: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-header">
-      <h1>Eva Support Assistant</h1>
-      <p>Mock Chatbot for Testing</p>
-    </div>
+  <div class="chat-widget-container">
+    <!-- Chat toggle button -->
+    <button class="chat-button" data-testid="open-chat-button" onclick="toggleChat()">
+      <svg class="chat-button-icon" viewBox="0 0 24 24">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+      </svg>
+      <div class="notification-badge"></div>
+    </button>
 
-    <div class="chat-messages" data-testid="chat-interface">
-      <div class="welcome-message">
-        Hello! I'm Eva, your support assistant. How can I help you today?
+    <!-- Chat window -->
+    <div class="chat-container open" id="chatContainer">
+      <div class="chat-header">
+        <div class="chat-header-text">
+          <h1>Eva</h1>
+          <p>Online</p>
+        </div>
+        <button class="close-button" onclick="toggleChat()">×</button>
       </div>
-    </div>
 
-    <div class="typing-indicator" data-testid="typing-indicator">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
+      <div class="chat-messages" data-testid="chat-interface">
+        <div class="welcome-message">
+          <strong>Hi there! I'm Eva.</strong>
+          I can help you explore testing options or learn about biomarkers and what they measure. What brought you here today?
+        </div>
+      </div>
 
-    <div class="chat-input-container">
-      <input
-        type="text"
-        class="chat-input"
-        data-testid="message-input"
-        placeholder="Type your message..."
-        autocomplete="off"
-      >
-      <button class="send-button" data-testid="send-button">→</button>
+      <div class="typing-indicator" data-testid="typing-indicator">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <div class="chat-input-container">
+        <input
+          type="text"
+          class="chat-input"
+          data-testid="message-input"
+          placeholder="Send a message"
+          autocomplete="off"
+        >
+        <button class="send-button" data-testid="send-button">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -228,6 +367,15 @@
     const messageInput = document.querySelector('[data-testid="message-input"]');
     const sendButton = document.querySelector('[data-testid="send-button"]');
     const typingIndicator = document.querySelector('[data-testid="typing-indicator"]');
+    const chatContainer = document.getElementById('chatContainer');
+
+    // Toggle chat window
+    function toggleChat() {
+      chatContainer.classList.toggle('open');
+      if (chatContainer.classList.contains('open')) {
+        messageInput.focus();
+      }
+    }
 
     // Response patterns for different question types
     const responsePatterns = [

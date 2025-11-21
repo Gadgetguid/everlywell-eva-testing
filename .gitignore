@@ -1,10 +1,16 @@
 # Node modules
 node_modules/
 
-# Test results
+# Playwright test results
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Cypress test results
+cypress/screenshots/
+cypress/videos/
+cypress/reports/
+cypress/downloads/
 
 # Python
 __pycache__/
@@ -16,6 +22,7 @@ venv/
 
 # Generated test files (optional - you might want to keep these)
 tests/generated-*.spec.js
+cypress/e2e/generated-*.cy.js
 analysis/
 
 # Environment variables - NEVER commit API keys
@@ -39,3 +46,4 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+cypress-debug.log*
