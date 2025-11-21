@@ -1,0 +1,233 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  playwright-tests:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start mock server
+        run: |
+          npm run mock-server &
+          echo $! > mock-server.pid
+          sleep 3
+
+      - name: Wait for mock server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run Playwright tests
+        run: npm run test:mock
+        env:
+          TEST_MODE: mock
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          if [ -f mock-server.pid ]; then
+            kill $(cat mock-server.pid) || true
+          fi
+
+  cypress-tests:
+    name: Cypress Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start mock server
+        run: |
+          npm run mock-server &
+          echo $! > mock-server.pid
+          sleep 3
+
+      - name: Wait for mock server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run Cypress tests
+        run: npm run cypress:run:mock
+        env:
+          TEST_MODE: mock
+
+      - name: Upload Cypress screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots/
+          retention-days: 7
+
+      - name: Upload Cypress videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos/
+          retention-days: 7
+
+      - name: Upload Cypress reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-reports
+          path: cypress/reports/
+          retention-days: 7
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          if [ -f mock-server.pid ]; then
+            kill $(cat mock-server.pid) || true
+          fi
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [playwright-tests, cypress-tests]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start mock server
+        run: |
+          npm run mock-server &
+          echo $! > mock-server.pid
+          sleep 3
+
+      - name: Wait for mock server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run benchmark
+        id: benchmark
+        run: |
+          npm run benchmark > benchmark-results.txt 2>&1
+          cat benchmark-results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.txt
+          retention-days: 30
+
+      - name: Comment benchmark on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const benchmarkResults = fs.readFileSync('benchmark-results.txt', 'utf8');
+
+            const comment = `## 🚀 Performance Benchmark Results
+
+            \`\`\`
+            ${benchmarkResults}
+            \`\`\`
+
+            *Benchmark run on commit ${{ github.sha }}*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          if [ -f mock-server.pid ]; then
+            kill $(cat mock-server.pid) || true
+          fi
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [playwright-tests, cypress-tests]
+    if: always()
+
+    steps:
+      - name: Create test summary
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.playwright-tests.result }}" == "success" ]; then
+            echo "✅ Playwright Tests: **PASSED**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Playwright Tests: **FAILED**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.cypress-tests.result }}" == "success" ]; then
+            echo "✅ Cypress Tests: **PASSED**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Cypress Tests: **FAILED**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed test reports in the artifacts section." >> $GITHUB_STEP_SUMMARY
